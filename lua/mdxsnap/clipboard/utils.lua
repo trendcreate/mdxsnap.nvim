@@ -6,7 +6,18 @@ local M = {}
 function M.is_supported_image_extension(file_path)
   if not file_path then return false end
   local ext_match = file_path:match("%.([^%./\\]+)$")
-  return ext_match and ({png = true, jpg = true, jpeg = true, gif = true, webp = true, tiff = true})[ext_match:lower()]
+  return ext_match and ({
+    png = true,
+    jpg = true,
+    jpeg = true,
+    gif = true,
+    webp = true,
+    tif = true,
+    tiff = true,
+    bmp = true,
+    heic = true,
+    heif = true,
+  })[ext_match:lower()]
 end
 
 -- Helper function to validate and check if path is a readable image file
@@ -25,12 +36,37 @@ function M.get_image_mime_map()
     ["image/jpeg"] = ".jpg",
     ["image/gif"] = ".gif",
     ["image/webp"] = ".webp",
+    ["image/tiff"] = ".tiff",
+    ["image/heic"] = ".heic",
+    ["image/heif"] = ".heic",
   }
 end
 
 -- Common preferred MIME types order
 function M.get_preferred_mimes()
-  return {"image/png", "image/jpeg", "image/webp", "image/gif"}
+  return {"image/png", "image/jpeg", "image/webp", "image/gif", "image/tiff", "image/heic", "image/heif"}
+end
+
+function M.find_available_image_target(types_output)
+  local available = {}
+  for line in (types_output or ""):gmatch("([^\r\n]+)") do
+    available[line:match("^%s*(.-)%s*$")] = true
+  end
+
+  local mime_map = M.get_image_mime_map()
+  for _, mime in ipairs(M.get_preferred_mimes()) do
+    if available[mime] and mime_map[mime] then
+      return mime, mime_map[mime]
+    end
+  end
+
+  for mime_type, extension in pairs(mime_map) do
+    if available[mime_type] then
+      return mime_type, extension
+    end
+  end
+
+  return nil, nil
 end
 
 -- Common function to save image data to temporary file
@@ -58,7 +94,13 @@ function M.process_clipboard_text(text_result, platform_name)
   local path_candidate = text_result
   
   -- Handle file:// URLs
-  if path_candidate:match("^file://") then
+  if path_candidate:match("^file:///%a:") then
+    path_candidate = path_candidate:sub(9)
+    path_candidate = utils.url_decode(path_candidate)
+    if not path_candidate then
+       return nil, false, platform_name .. ": Failed to URL decode file URI from clipboard."
+    end
+  elseif path_candidate:match("^file://") then
     path_candidate = path_candidate:sub(8)
     path_candidate = utils.url_decode(path_candidate)
     if not path_candidate then
@@ -74,7 +116,12 @@ function M.process_clipboard_text(text_result, platform_name)
   local expanded_path, expand_err = utils.expand_shell_vars_in_path(path_candidate)
   if expanded_path then
     if vim.fn.filereadable(expanded_path) == 1 then
-      return expanded_path, false, nil
+      local validated_path = M.validate_image_path(expanded_path)
+      if validated_path then
+        return validated_path, false, nil
+      end
+
+      return nil, false, platform_name .. ": Clipboard text points to a readable file, but it is not a supported image: '" .. expanded_path .. "'."
     else
       return nil, false, platform_name .. ": Clipboard text (path candidate) '" .. expanded_path .. "' is not a readable file."
     end

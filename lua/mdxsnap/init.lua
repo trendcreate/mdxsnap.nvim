@@ -4,7 +4,7 @@ local M = {}
 
 -- Export setup function for standard Neovim plugin pattern
 M.setup = function(user_options)
-  config.setup(user_options)
+  return config.setup(user_options)
 end
 
 -- Export core functionality for backwards compatibility
@@ -16,7 +16,10 @@ end
 -- Export config for backwards compatibility
 M.config = config
 
--- Export options for direct access
-M.options = config.options
-
-return M
+return setmetatable(M, {
+  __index = function(_, key)
+    if key == "options" then
+      return config.options
+    end
+  end,
+})

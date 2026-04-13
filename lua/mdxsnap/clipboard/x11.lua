@@ -2,7 +2,7 @@ local clipboard_utils = require("mdxsnap.clipboard.utils")
 local M = {}
 
 function M.fetch_image_path_from_clipboard_x11()
-  if not vim.fn.executable("xclip") then
+  if vim.fn.executable("xclip") == 0 then
     return nil, false, "X11 environment: xclip command not found."
   end
 
@@ -26,43 +26,25 @@ function M.fetch_image_path_from_clipboard_x11()
     is_cmd_failed = true
   end
 
-  local target_map = clipboard_utils.get_image_mime_map()
-  local selected_target = nil
-  local selected_ext = nil
-
-  -- Find available image targets
+  local selected_target, selected_ext
   if not is_cmd_failed and targets_content ~= "" then
-      local preferred_targets = clipboard_utils.get_preferred_mimes()
-      local is_found = false
-      for line in targets_content:gmatch("([^\n]+)") do
-          local trimmed = line:match("^%s*(.-)%s*$")
-          for _, target in ipairs(preferred_targets) do
-              if trimmed == target and target_map[target] then
-                  selected_target = target
-                  selected_ext = target_map[target]
-                  is_found = true
-                  break
-              end
-          end
-          if is_found then
-              break
-          end
-      end
+    selected_target, selected_ext = clipboard_utils.find_available_image_target(targets_content)
   end
 
   -- Try to save image data if found
+  local image_error
   if selected_target and selected_ext then
     local tmp_path = clipboard_utils.save_image_to_tmp_file(selected_target, selected_ext, "xclip -selection clipboard -t %s -o > '%s'")
     if tmp_path then
       return tmp_path, true, nil
-    else
-      local failure_reason = "unknown reason"
-      if vim.v.shell_error ~= 0 then
-        failure_reason = "xclip command failed with shell_error: " .. vim.v.shell_error
-      end
-      vim.notify("X11: Could not get temporary directory for image target. Falling back to text.", vim.log.levels.WARN)
-      return nil, false, "X11: Found image target '" .. selected_target .. "' but failed to retrieve/save image data: " .. failure_reason
     end
+
+    local failure_reason = "unknown reason"
+    if vim.v.shell_error ~= 0 then
+      failure_reason = "xclip command failed with shell_error: " .. vim.v.shell_error
+    end
+    vim.notify("X11: Failed to save clipboard image target. Falling back to text.", vim.log.levels.WARN)
+    image_error = "X11: Found image target '" .. selected_target .. "' but failed to retrieve/save image data: " .. failure_reason
   end
 
   -- Fall back to text content
@@ -81,6 +63,9 @@ function M.fetch_image_path_from_clipboard_x11()
     local error_detail = "X11: xclip did not return any text. Clipboard might be empty, or contain non-text data (e.g., image data that could not be processed via TARGETS)"
     if not is_close_ok or (close_reason == "exit" and close_code ~= 0) or close_reason == "signal" then
        error_detail = error_detail .. ". xclip (text mode) might also have encountered an error [status: " .. tostring(close_reason) .. " code: " .. tostring(close_code) .. "]"
+    end
+    if image_error then
+      error_detail = image_error .. ". " .. error_detail
     end
     error_detail = error_detail .. "."
     return nil, false, error_detail

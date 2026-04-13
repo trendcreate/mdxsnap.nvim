@@ -2,6 +2,7 @@ local config_module = require("mdxsnap.config")
 local utils = require("mdxsnap.utils")
 local fs_utils = require("mdxsnap.fs_utils")
 local clipboard = require("mdxsnap.clipboard")
+local clipboard_utils = require("mdxsnap.clipboard.utils")
 local editor_utils = require("mdxsnap.editor_utils")
 
 local M = {}
@@ -60,6 +61,11 @@ local function resolve_clipboard_image()
     return nil, nil, "Obtained clipboard image path is not a readable file: " .. image_path
   end
 
+  if not clipboard_utils.validate_image_path(image_path) then
+    cleanup_temp_image(image_path, is_temp)
+    return nil, nil, "Obtained clipboard path is not a supported image file: " .. image_path
+  end
+
   return image_path, is_temp, nil
 end
 
@@ -88,7 +94,9 @@ end
 
 local function insert_text_at_cursor(buf_nr, text)
   local cursor_pos = vim.api.nvim_win_get_cursor(0)
-  vim.api.nvim_buf_set_lines(buf_nr, cursor_pos[1] - 1, cursor_pos[1] - 1, false, { text })
+  local row = cursor_pos[1] - 1
+  local col = cursor_pos[2]
+  vim.api.nvim_buf_set_text(buf_nr, row, col, row, col, { text })
 end
 
 -- Main Function
@@ -143,7 +151,7 @@ M.paste_image = function(desired_filename_stem)
     new_path,
     new_filename,
     paste_config.customTextFormat or opts.customTextFormat,
-    paste_config.project_root,
+    ctx.path,
     paste_config.type,
     desired_filename_stem
   )

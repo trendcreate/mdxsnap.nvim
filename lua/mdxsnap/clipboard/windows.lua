@@ -1,4 +1,3 @@
-local utils = require("mdxsnap.utils")
 local clipboard_utils = require("mdxsnap.clipboard.utils")
 local M = {}
 
@@ -44,33 +43,7 @@ function M.fetch_image_path_from_clipboard_windows()
       return nil, false, error_detail .. "."
   end
 
-  local path_candidate = text_result
-  
-  -- Handle Windows-specific file URI formats
-  if path_candidate:match("^file:///") then
-      path_candidate = path_candidate:sub(9)
-      path_candidate = utils.url_decode(path_candidate)
-      if not path_candidate then
-          return nil, false, "Windows: Failed to URL decode file URI from clipboard (text fallback)."
-      end
-  elseif path_candidate:match("^file://") then
-       path_candidate = path_candidate:sub(8)
-       path_candidate = utils.url_decode(path_candidate)
-       if not path_candidate then
-          return nil, false, "Windows: Failed to URL decode file URI from clipboard (text fallback)."
-      end
-  end
-
-  local expanded_path, expand_err = utils.expand_shell_vars_in_path(path_candidate)
-  if not expanded_path then
-      return nil, false, "Windows: Failed to expand clipboard text path (text fallback): " .. (expand_err or "unknown error")
-  end
-  
-  if vim.fn.filereadable(expanded_path) == 1 then
-      return expanded_path, false, nil
-  else
-      return nil, false, "Windows: Clipboard text (path candidate, fallback) '" .. expanded_path .. "' is not a readable file."
-  end
+  return clipboard_utils.process_clipboard_text(text_result, "Windows")
 end
 
 return M

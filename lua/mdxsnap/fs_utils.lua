@@ -1,13 +1,83 @@
 local utils = require("mdxsnap.utils")
 local M = {}
 
+local PROJECT_ROOT_MARKERS = { ".git", ".project", "_darcs", ".hg", ".bzr", ".svn" }
+
+local function normalize_absolute_path(path)
+  local normalized = utils.normalize_slashes(vim.fn.fnamemodify(path, ":p"))
+  if normalized ~= "/" and not normalized:match("^%a:/$") then
+    normalized = normalized:gsub("/$", "")
+  end
+  return normalized
+end
+
+local function path_exists(path)
+  return vim.fn.filereadable(path) == 1 or vim.fn.isdirectory(path) == 1
+end
+
+local function trim(text)
+  return (text or ""):gsub("^%s*(.-)%s*$", "%1")
+end
+
+local function sanitize_filename_stem(desired_stem, file_ext)
+  local stem = trim(desired_stem)
+  if stem == "" then
+    return nil, "Filename stem cannot be empty."
+  end
+
+  if stem:find("[/\\]") then
+    return nil, "Filename must be a plain stem, not a path: " .. desired_stem
+  end
+
+  if stem == "." or stem == ".." then
+    return nil, "Filename stem cannot be '.' or '..'."
+  end
+
+  if stem:find('[<>:"|%?%*]') then
+    return nil, "Filename contains unsupported characters: " .. desired_stem
+  end
+
+  if file_ext ~= "" and stem:lower():sub(-#file_ext) == file_ext then
+    stem = stem:sub(1, #stem - #file_ext)
+  end
+
+  if stem == "" then
+    return nil, "Filename stem cannot be empty."
+  end
+
+  return stem
+end
+
+local function build_destination_path(target_dir, filename)
+  return normalize_absolute_path(target_dir .. "/" .. filename)
+end
+
+local function generate_random_stem(source_path, attempt)
+  local seed = table.concat({ tostring(vim.loop.now() or 0), tostring(os.time()), tostring(attempt or 0), source_path }, ":")
+  local is_ok, hash = pcall(vim.fn.sha256, seed)
+  if is_ok and type(hash) == "string" and hash ~= "" then
+    return vim.fn.strcharpart(hash, 0, 8)
+  end
+
+  return string.format("clip_%d_%d", os.time(), attempt or 0)
+end
+
 function M.find_project_root_path(start_path)
-  local current_path, err = utils.expand_shell_vars_in_path(vim.fn.fnamemodify(start_path, ":h"))
+  local current_path, err = utils.expand_shell_vars_in_path(vim.fn.fnamemodify(start_path, ":p:h"))
   if not current_path then return nil, err end
 
-  local markers = { ".git", ".project", "_darcs", ".hg", ".bzr", ".svn" }
+  current_path = normalize_absolute_path(current_path)
+
+  if vim.fs and vim.fs.root then
+    local project_root = vim.fs.root(current_path, PROJECT_ROOT_MARKERS)
+    if project_root then
+      return utils.normalize_slashes(project_root)
+    end
+    return current_path
+  end
+
   for _ = 1, 64 do
-    for _, marker in ipairs(markers) do
+    for _, marker in ipairs(PROJECT_ROOT_MARKERS) do
       if vim.fn.isdirectory(current_path .. "/" .. marker) == 1 or vim.fn.filereadable(current_path .. "/" .. marker) == 1 then
         return current_path
       end
@@ -16,7 +86,8 @@ function M.find_project_root_path(start_path)
     if parent_path == current_path then break end
     current_path = parent_path
   end
-  return utils.expand_shell_vars_in_path(vim.fn.getcwd())
+
+  return current_path
 end
 
 function M.get_tmp_dir()
@@ -78,28 +149,34 @@ function M.copy_image_file(source_path, target_dir, file_ext, desired_stem)
     return nil, nil, "Invalid source path (empty or nil)"
   end
 
-  local filename
+  local filename, full_path
   if desired_stem and desired_stem ~= "" then
-    filename = desired_stem .. file_ext
+    local sanitized_stem, stem_err = sanitize_filename_stem(desired_stem, file_ext)
+    if not sanitized_stem then
+      return nil, nil, stem_err
+    end
+
+    filename = sanitized_stem .. file_ext
+    full_path = build_destination_path(target_dir, filename)
+    if path_exists(full_path) then
+      return nil, nil, "Destination file already exists: " .. full_path
+    end
   else
-    -- Generate unique filename
-    local time_ms = vim.loop.now() or os.time() * 1000
-    local time_str = tostring(time_ms)
+    for attempt = 1, 10 do
+      local candidate_stem = generate_random_stem(source_path, attempt)
+      local candidate_filename = candidate_stem .. file_ext
+      local candidate_path = build_destination_path(target_dir, candidate_filename)
+      if not path_exists(candidate_path) then
+        filename = candidate_filename
+        full_path = candidate_path
+        break
+      end
+    end
 
-    -- Generate hash for filename
-    local hash = vim.fn.sha256(time_str .. source_path)
-    if not hash then
-      hash = vim.fn.sha256(tostring(os.time()) .. source_path)
+    if not filename or not full_path then
+      return nil, nil, "Failed to generate a unique filename."
     end
-    if not hash then
-      hash = "fallback" .. tostring(os.time())
-    end
-    local random_str = vim.fn.strcharpart(hash, 0, 8)
-    filename = random_str .. file_ext
   end
-
-  local full_path = utils.normalize_slashes(target_dir .. "/" .. filename)
-  full_path = utils.normalize_slashes(vim.fn.fnamemodify(full_path, ":p"))
 
   -- Copy file using Lua I/O
   local src_file, src_err = io.open(source_path, "rb")

@@ -2,7 +2,7 @@ local clipboard_utils = require("mdxsnap.clipboard.utils")
 local M = {}
 
 function M.fetch_image_path_from_clipboard_wayland()
-  if not vim.fn.executable("wl-paste") then
+  if vim.fn.executable("wl-paste") == 0 then
     return nil, false, "Wayland environment detected, but wl-paste command not found."
   end
 
@@ -15,30 +15,7 @@ function M.fetch_image_path_from_clipboard_wayland()
     types_handle:close()
   end
 
-  local mime_map = clipboard_utils.get_image_mime_map()
-  local selected_mime = nil
-  local selected_ext = nil
-
-  -- Check for preferred MIME types first
-  local preferred_mimes = clipboard_utils.get_preferred_mimes()
-  for _, mime in ipairs(preferred_mimes) do
-      if types_str:find(mime, 1, true) and mime_map[mime] then
-          selected_mime = mime
-          selected_ext = mime_map[mime]
-          break
-      end
-  end
-  
-  -- If no preferred MIME type found, check all available
-  if not selected_mime then
-      for mime_type, extension in pairs(mime_map) do
-          if types_str:find(mime_type, 1, true) then
-              selected_mime = mime_type
-              selected_ext = extension
-              break
-          end
-      end
-  end
+  local selected_mime, selected_ext = clipboard_utils.find_available_image_target(types_str)
 
   -- Try to save image data if found
   if selected_mime and selected_ext then
