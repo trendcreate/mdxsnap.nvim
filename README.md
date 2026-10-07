@@ -1,4 +1,4 @@
-# mdxsnap.nvim 📸
+# mdxsnap.nvim
 
 A Neovim plugin to paste clipboard images into markdown and MDX files by saving and inserting image links automatically.
 
@@ -16,28 +16,25 @@ A Neovim plugin to paste clipboard images into markdown and MDX files by saving 
 
 </details>
 
-## 🚀 Features
+## Features
 
 - Paste images directly from a clipboard full path or raw data using the `:PasteImage [filename]` command.
   - If `filename` is provided, it's used as the image's filename (stem) and alt text.
   - If omitted, a random filename is generated.
-- Supports OS-standard clipboard tools:
-  - macOS: `pbpaste` and `osascript`
-  - Linux: `wl-paste` or `xclip`
-  - Windows: PowerShell (`Get-Clipboard`) (untested)
-- Automatically expands shell variables like `~` and `$HOME` in path configurations.
-- Flexible image saving locations:
-  - Default path settings (`DefaultPastePath`, `DefaultPastePathType`).
-  - Project-specific overrides (`ProjectOverrides`) based on project name or full path, which can also override `customImports` and `customTextFormat`.
-- Automatic insertion of custom import statements (`customImports`).
-- Customizable image reference text format (`customTextFormat`).
+- Cross-platform (windows, macos, linux)
+- Flexible configuration
 
-## 🪡 Prerequisites
+## Prerequisites
 
 - Neovim (0.10+ recommended)
 - A command-line clipboard tool for your OS (see Features list).
 
-## 🛠 Installation
+
+- macOS: `pbpaste` and `osascript`
+- Linux: `wl-paste` or `xclip`
+- Windows: PowerShell (`Get-Clipboard`) (untested)
+
+## Installation
 
 - Using `packer.nvim`, `lazy.nvim`
 
@@ -50,7 +47,7 @@ use {
 }
 ```
 
-## 🎯 Usage
+## Usage
 
 1.  Open an MDX/Markdown file.
 2.  Copy the full absolute path of an image file to your system clipboard.
@@ -68,7 +65,7 @@ use {
     - Insert an image reference at your cursor (formatted by `customTextFormat`).
     - Show a success notification.
 
-## 🔧 Configuration
+## Configuration
 
 Configure `mdxsnap.nvim` by calling the `setup` function. Here's an example with explanations:
 
@@ -182,35 +179,3 @@ This automatically saves images to the `images` directory when working on your Z
 ├── bun.lock
 └── package.json
 ```
-
-## 🌍 For contributer
-
-By contributing to this project, you agree to the following terms:
-
-1. **You grant a license**: You grant the project owner a perpetual, worldwide, non-exclusive, royalty-free, irrevocable license to use, modify, distribute, and sublicense your contributions under the **Apache License 2.0**.
-2. **You retain ownership**: You still own the copyright of your contribution, but you waive any claims against the project related to your contribution.
-3. **No additional patent rights**: You **do not** grant additional patent rights beyond what is covered by Apache 2.0.
-4. **Your contributions are original**: You confirm that your contributions do not violate any third-party rights.
-
-By submitting a pull request, you agree to these terms.
-
-## 📜 License
-
-<div align="left" style="flex: inline" >
-<a href="https://www.apache.org/licenses/LICENSE-2.0" >
-<img src="https://img.shields.io/badge/License-Apache%20License%202.0-blue.svg" alt="Apache License 2.0"
-</a>
-<a href="https://github.com/MakeNowJust/sushi-ware" >
-<img src="https://img.shields.io/badge/License-SUSHI--WARE%20%F0%9F%8D%A3-blue.svg" alt="SUSHI-WARE LICENSE"
-</a>
-</div>
-
-This project is dual-licensed under [Apache License 2.0](https://www.apache.org/licenses/LICENSE-2.0) and [SUSHI-WARE LICENSE](https://github.com/MakeNowJust/sushi-ware).
-
-A reference to the latest license should be used, even if the attached license is outdated of major versions.
-
-## 🤝 Reference
-
-This repository was created using the [MicroRepository](https://github.com/HidemaruOwO/MicroRepository) template.
-
-- [HidemaruOwO/MicroRepository](https://github.com/HidemaruOwO/MicroRepository)
