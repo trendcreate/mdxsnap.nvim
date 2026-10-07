@@ -39,22 +39,11 @@ A Neovim plugin to paste clipboard images into markdown and MDX files by saving 
 
 ## 🛠 Installation
 
-- Using `packer.nvim`
+- Using `packer.nvim`, `lazy.nvim`
 
 ```lua
 use {
-  'HidemaruOwO/mdxsnap.nvim',
-  config = function()
-    require('mdxsnap').setup()
-  end
-}
-```
-
-- Using `lazy.nvim`
-
-```lua
-{
-  'HidemaruOwO/mdxsnap.nvim',
+  'trendcreate/mdxsnap.nvim',
   config = function()
     require('mdxsnap').setup()
   end
