@@ -1,8 +1,8 @@
 # mdxsnap.nvim
 
-A Neovim plugin to paste clipboard images into markdown and MDX files by saving and inserting image links automatically.
+A Neovim plugin to paste an image in a clipboard into markdown and MDX files.
 
-<details open>
+<details close>
 <summary>Snapping markdown file</summary>
 
 <img src="docs/snap_markdown.gif" alt="Snapping markdown file" width="600"/>
@@ -18,7 +18,7 @@ A Neovim plugin to paste clipboard images into markdown and MDX files by saving 
 
 ## Features
 
-- Paste images directly from a clipboard full path or raw data using the `:PasteImage [filename]` command.
+- Paste images in a clipboard with the `:PasteImage [filename]` command.
   - If `filename` is provided, it's used as the image's filename (stem) and alt text.
   - If omitted, a random filename is generated.
 - Cross-platform (windows, macos, linux)
@@ -27,12 +27,11 @@ A Neovim plugin to paste clipboard images into markdown and MDX files by saving 
 ## Prerequisites
 
 - Neovim (0.10+ recommended)
-- A command-line clipboard tool for your OS (see Features list).
 
-
+- A command-line clipboard tool for individual OS.
 - macOS: `pbpaste` and `osascript`
 - Linux: `wl-paste` or `xclip`
-- Windows: PowerShell (`Get-Clipboard`) (untested)
+- Windows: PowerShell (`Get-Clipboard`)
 
 ## Installation
 
